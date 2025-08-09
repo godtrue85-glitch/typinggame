@@ -52,15 +52,53 @@ document.addEventListener("keydown", () => {
 
 musicIcon.addEventListener("click", () => {
   if (bgm.paused) {
-    bgm.play();
-    musicIcon.src = "icons/music-on.png";
-    isMusicPlaying = true;
+    // iOS에서도 안정적으로 시작
+    ensureBgmUnlocked();
   } else {
     bgm.pause();
     musicIcon.src = "icons/music-off.png";
     isMusicPlaying = false;
   }
 });
+
+
+// === 모바일 오디오 언락 + 프리워밍 ===
+const audioIds = ["bgm", "hero-hit-sound", "game-over-bgm", "gold-sound", "hit-sound"];
+
+function primeAudio() {
+  audioIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    try {
+      // 사용자 제스처 내에서 미세 재생/정지 → iOS에서 재생 권한 부여
+      el.volume = (id === "bgm") ? 0.4 : 1.0;
+      el.play().then(() => {
+        el.pause();
+        el.currentTime = 0;
+      }).catch(() => {});
+    } catch (e) {}
+  });
+}
+
+function ensureBgmUnlocked() {
+  const bgm = document.getElementById("bgm");
+  const musicIcon = document.getElementById("music-icon");
+  if (bgm && bgm.paused) {
+    bgm.play().then(() => {
+      if (musicIcon) musicIcon.src = "icons/music-on.png";
+      isMusicPlaying = true;
+    }).catch(() => {});
+  }
+}
+
+function unlockAudioOnce() {
+  primeAudio();
+  ensureBgmUnlocked();
+}
+
+document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
+document.addEventListener("touchstart", unlockAudioOnce, { once: true, passive: true });
+document.addEventListener("keydown", unlockAudioOnce, { once: true });
 
 function setNewWord() {
   const wordsForStage = stageWords[stage] || stageWords[Math.max(...Object.keys(stageWords))];
@@ -243,13 +281,17 @@ function showGoldMessage(amount) {
 }
 
 function playSound(id, volume = 1.0) {
-  const audio = document.getElementById(id);
-  if (audio) {
-    audio.volume = volume;
-    audio.currentTime = 0;
-    audio.play();
-  }
+  const srcEl = document.getElementById(id);
+  if (!srcEl) return;
+
+  // 같은 소리를 빠르게 여러 번 재생 가능
+  const s = srcEl.cloneNode(true);
+  s.volume = volume;
+  document.body.appendChild(s);
+  s.play().catch(err => console.log("play error:", id, err));
+  s.addEventListener("ended", () => s.remove());
 }
+
 
 function playAttackEffect() {
   const hero = document.querySelector('.hero');
