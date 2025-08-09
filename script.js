@@ -39,16 +39,38 @@ const bossImages = [
 
 const bgm = document.getElementById("bgm");
 const musicIcon = document.getElementById("music-icon");
+
+// ===== BGM 첫 시작을 확실히 잡아주는 유틸 =====
+let bgmStarted = false;
+
+function startBgmIfAllowed() {
+  if (bgmStarted || isMuted) return;        // 이미 시작했거나 전체 음소거면 패스
+  bgm.volume = 0.4;
+  const p = bgm.play();
+  if (p && typeof p.then === "function") {
+    p.then(() => {
+      bgmStarted = true;
+      isMusicPlaying = true;
+      if (musicIcon) musicIcon.src = "icons/music-on.png";
+    }).catch(() => { /* 모바일 정책으로 거부될 수 있으니 조용히 무시 */ });
+  }
+}
+
+// 1) 화면 아무 곳이나 첫 터치
+document.addEventListener("pointerdown", startBgmIfAllowed, { once: true });
+// 2) 입력창을 처음 터치해 포커스 올릴 때
+input.addEventListener("focus", startBgmIfAllowed, { once: true });
+// 3) 첫 제출(엔터/확인 버튼) 시
+typingForm.addEventListener("submit", () => startBgmIfAllowed(), { once: true });
+
+// 음소거 아이콘(마스터 뮤트) 쪽에도 시작 보조
+muteBtn.addEventListener("click", () => {
+  startBgmIfAllowed();          // iOS에서 아이콘 첫 탭으로도 언락
+  setMasterMute(!isMuted);
+});
+
 let isMusicPlaying = false;
 
-document.addEventListener("keydown", () => {
-  if (!isMusicPlaying) {
-    bgm.volume = 0.4;
-    bgm.play();
-    isMusicPlaying = true;
-    musicIcon.src = "icons/music-on.png";
-  }
-}, { once: true });
 
 musicIcon.addEventListener("click", () => {
   if (bgm.paused) {
