@@ -65,6 +65,9 @@ musicIcon.addEventListener("click", () => {
 // === 모바일 오디오 언락 + 프리워밍 ===
 const audioIds = ["bgm", "hero-hit-sound", "game-over-bgm", "gold-sound", "hit-sound"];
 
+// 마스터 음소거 상태
+let isMuted = false;
+
 function primeAudio() {
   audioIds.forEach(id => {
     const el = document.getElementById(id);
@@ -185,16 +188,36 @@ document.addEventListener("pointerdown", ensureBgmUnlocked, unlockOnce);
 document.addEventListener("touchstart", ensureBgmUnlocked, unlockOnce);
 document.addEventListener("keydown", ensureBgmUnlocked, unlockOnce);
 
-// === (B) 음악 토글 ===
-musicIcon.addEventListener("click", () => {
-  if (bgm.paused) {
-    ensureBgmUnlocked();
-  } else {
-    bgm.pause();
-    musicIcon.src = "icons/music-off.png";
-    isMusicPlaying = false;
-  }
-});
+// 모든 오디오에 muted 반영
+function setMasterMute(mute) {
+  isMuted = mute;
+  audioIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.muted = mute;
+  });
+  // 아이콘 업데이트
+  const musicIcon = document.getElementById("music-icon");
+  const muteBtn = document.getElementById("mute-btn");
+  if (musicIcon) musicIcon.src = mute ? "icons/music-off.png" : "icons/music-on.png";
+  if (muteBtn) muteBtn.setAttribute("aria-pressed", String(mute));
+}
+
+// 초기 상태(원하면 로컬스토리지로 기억 가능)
+// setMasterMute(false);
+
+// 버튼 클릭 핸들러
+const muteBtn = document.getElementById("mute-btn");
+if (muteBtn) {
+  muteBtn.addEventListener("click", (e) => {
+    e.preventDefault();   // 폼 제출 방지
+    e.stopPropagation();  // 버블링 방지
+    // iOS에서 첫 탭에 오디오 언락
+    if (!isMusicPlaying) {
+      ensureBgmUnlocked?.();
+    }
+    setMasterMute(!isMuted);
+  });
+}
 
 // === (C) 단어/몬스터 세팅은 기존 그대로 ===
 

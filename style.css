@@ -93,7 +93,15 @@ body {
 .primary-btn:active { transform: scale(0.99); }
 
 .music-toggle { margin-top: 10px; text-align: center; }
-#music-icon { width: 40px; height: 40px; cursor: pointer; }
+#mute-btn {
+  padding: 8px 10px;               /* 터치 영역 확대 */
+  border: none; background: none;  /* 기본 스타일 제거 */
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#mute-btn:active { transform: scale(0.98); }
+#music-icon { width: 40px; height: 40px; display: block; }
+
 
 /* 골드 텍스트 */
 #gold-message {
