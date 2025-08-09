@@ -128,6 +128,104 @@ function spawnDustParticles() {
   }
 }
 
+// === (A) 모바일 오디오 언락: 키/터치/포인터 모두 대응 ===
+function ensureBgmUnlocked() {
+  if (!isMusicPlaying && bgm.paused) {
+    bgm.volume = 0.4;
+    bgm.play().then(() => {
+      isMusicPlaying = true;
+      musicIcon.src = "icons/music-on.png";
+    }).catch(() => {
+      // 실패 시는 무시(사용자 재터치 시 재시도)
+    });
+  }
+}
+
+// 최초 1회만
+const unlockOnce = { once: true, passive: true };
+document.addEventListener("pointerdown", ensureBgmUnlocked, unlockOnce);
+document.addEventListener("touchstart", ensureBgmUnlocked, unlockOnce);
+document.addEventListener("keydown", ensureBgmUnlocked, unlockOnce);
+
+// === (B) 음악 토글 ===
+musicIcon.addEventListener("click", () => {
+  if (bgm.paused) {
+    ensureBgmUnlocked();
+  } else {
+    bgm.pause();
+    musicIcon.src = "icons/music-off.png";
+    isMusicPlaying = false;
+  }
+});
+
+// === (C) 단어/몬스터 세팅은 기존 그대로 ===
+
+// === (D) 입력 제출: form submit으로 통합 (모바일 Enter/버튼 모두 처리) ===
+const typingForm = document.getElementById("typing-form");
+const submitBtn = document.getElementById("submit-btn");
+
+function handleSubmit() {
+  if (heroHealth <= 0) return;
+
+  const typed = input.value.trim();
+  if (typed === currentWord) {
+    damageMonster();
+    setNewWord();
+  } else {
+    heroHealth--;
+    updateHeroHearts();
+    playSound("hero-hit-sound");
+
+    monster.classList.add("attack");
+    setTimeout(() => monster.classList.remove("attack"), 400);
+
+    if (heroHealth <= 0) {
+      input.disabled = true;
+
+      // BGM 정지 & 게임오버 BGM 재생
+      bgm.pause();
+      bgm.currentTime = 0;
+      const gameOverBgm = document.getElementById("game-over-bgm");
+      gameOverBgm.volume = 0.8;
+      gameOverBgm.currentTime = 0;
+      gameOverBgm.play().catch(()=>{});
+
+      // 게임오버 표시
+      gameOverText.classList.remove("hidden");
+      void gameOverText.offsetHeight; // 리플로우로 애니메이션 트리거
+      gameOverText.classList.add("show-game-over");
+
+      setTimeout(() => {
+        retryBtn.classList.remove("hidden");
+        retryBtn.classList.add("show");
+      }, 1000);
+    }
+  }
+  input.value = "";
+}
+
+typingForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  handleSubmit();
+});
+
+// Enter도 그대로 지원(데스크톱 호환)
+input.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    handleSubmit();
+  }
+}, { passive: false });
+
+// === (E) 키보드 올라올 때 입력창 보이기 (일부 기기에서만 필요) ===
+input.addEventListener("focus", () => {
+  setTimeout(() => {
+    input.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, 150);
+});
+
+// === (F) 나머지 기존 로직 그대로 (retry, setNewMonster 등) ===
+// ... (사용자님 코드 그대로 유지)
 
 function updateHeroHearts() {
   heroHearts.innerHTML = "";
