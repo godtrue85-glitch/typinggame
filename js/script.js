@@ -224,8 +224,6 @@ input.addEventListener("focus", () => {
   }, 150);
 });
 
-// === (F) 나머지 기존 로직 그대로 (retry, setNewMonster 등) ===
-// ... (사용자님 코드 그대로 유지)
 
 function updateHeroHearts() {
   heroHearts.innerHTML = "";
