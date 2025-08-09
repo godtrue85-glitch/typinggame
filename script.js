@@ -69,8 +69,6 @@ muteBtn.addEventListener("click", () => {
   setMasterMute(!isMuted);
 });
 
-let isMusicPlaying = false;
-
 
 musicIcon.addEventListener("click", () => {
   if (bgm.paused) {
