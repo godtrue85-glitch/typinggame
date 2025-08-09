@@ -1,17 +1,45 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>타자 게임</title>
-  <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hero vs Monster Typing Game</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div id="game-container">
-    <canvas id="game-canvas"></canvas>
-    <input id="typing-input" type="text" autofocus autocomplete="off" />
-    <button id="btn-restart">다시 시작</button>
+  <div class="game-container">
+    <div class="monitor">
+      <div id="dust-container"></div>
+      <div id="stage-indicator">Stage 1</div>
+      <div class="hero-wrapper">
+        <div id="hero-hearts"></div>
+        <img src="hero.png" class="hero" id="hero">
+      </div>
+      <img src="monsters/monster1.png" class="monster" id="monster">
+      <div class="health-bar"><div class="health-bar-inner"></div></div>
+      <div id="gold-message"></div>
+    </div>
+    <audio id="hero-hit-sound" src="sounds/hero-hit.mp3"></audio>
+    <div id="game-over" class="game-over hidden">Game Over</div>
+    <button id="retry-btn" class="hidden">재도전</button>
+    <audio id="game-over-bgm" src="sounds/game-over.mp3" preload="auto"></audio>
+    <audio id="bgm" src="sounds/fantasy_background.mp3" preload="auto" loop></audio>
+    <div class="typing-area">
+      <div class="info">
+        <span id="score">무찌른 몬스터 수: 0</span>
+        <span id="gold">얻은 금화: 0</span>
+      </div>
+      <div class="word-box" id="word">사과</div>
+      <input type="text" id="input" autocomplete="off" />
+      <div class="music-toggle">
+        <img id="music-icon" src="icons/music-on.png" alt="음악 아이콘" />
+      </div>
+    </div>
   </div>
-  <script src="js/game.js"></script>
+  <audio id="gold-sound" src="sounds/gold.mp3" preload="auto"></audio>
+  <audio id="hit-sound" src="sounds/hit.mp3" preload="auto"></audio>
+  <script src="script.js"></script>
 </body>
 </html>
