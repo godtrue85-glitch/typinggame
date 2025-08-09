@@ -63,7 +63,7 @@ musicIcon.addEventListener("click", () => {
 
 
 // === 모바일 오디오 언락 + 프리워밍 ===
-const audioIds = ["bgm", "hero-hit-sound", "game-over-bgm", "gold-sound", "hit-sound"];
+const audioIds = ["fantasy-background-bgm", "hero-hit-sound", "game-over-bgm", "gold-sound", "hit-sound"];
 
 // 마스터 음소거 상태
 let isMuted = false;
