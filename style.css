@@ -32,20 +32,26 @@ body {
 
 /* 캐릭터 크기: 화면에 맞춰 축소 */
 .hero {
-  position: absolute; z-index: 1; }
-  #hero-hearts {position: absolute; z-index: 200; pointer-events: none; }
-  
+  position: absolute;
+  bottom: 8px;           /* ← 복구 */
+  left: 8px;             /* ← 복구 */
+  height: clamp(90px, 24vw, 150px);  /* ← 복구 */
+  z-index: 1;
+}
 .monster {
   position: absolute; bottom: 18px; right: 20px;
   height: clamp(80px, 22vw, 130px);
   will-change: transform, opacity;
 }
 
-/* 하트 */
 #hero-hearts {
-  position: absolute; bottom: clamp(90px, 28vw, 160px); left: 16px;
-  display: flex; gap: 2px; z-index: 10; pointer-events: none;
+  position: absolute;
+  z-index: 200;          /* 항상 히어로 위 */
+  pointer-events: none;
+  display: flex;
+  gap: 2px;
   font-size: clamp(18px, 3.6vw, 25px);
+  /* ➜ bottom/left는 JS(positionHearts)에서 계산해서 넣습니다. */
 }
 
 /* 체력바 */

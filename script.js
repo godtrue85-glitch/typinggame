@@ -24,6 +24,14 @@ let bossHealth = 10;
 
 let previousMonsterIndex = -1;
 
+// 한글 IME 조합 처리
+let isComposing = false;
+input.addEventListener('compositionstart', () => { isComposing = true; });
+input.addEventListener('compositionend', () => { isComposing = false; });
+
+// 비교용 정규화 유틸 (NFC + 제로폭문자 제거)
+const norm = (s) => (s || "").normalize('NFC').replace(/[\u200B-\u200D\uFEFF]/g, "");
+
 // 오디오 상태
 let isMusicPlaying = false;
 let isMuted = false;
@@ -57,7 +65,7 @@ const audioIds = ["bgm","hero-hit-sound","game-over-bgm","gold-sound","hit-sound
 
 // ===== BGM 시작 보장 & 오디오 언락 =====
 function startBgmIfAllowed() {
-  if (bgmStarted || isMuted || !bgm  || isMusicPlaying) return;
+  if (bgmStarted || isMuted || !bgm || isMusicPlaying) return;
   bgm.volume = 0.4;
   const p = bgm.play();
   if (p && p.then) {
@@ -65,7 +73,12 @@ function startBgmIfAllowed() {
       bgmStarted = true;
       isMusicPlaying = true;
       if (musicIcon) musicIcon.src = "icons/music-on.png";
-    }).catch(() => {/* 모바일 정책 거부 시 조용히 무시 */});
+      console.log("[BGM] started");
+    }).catch((err) => {
+      console.warn("[BGM] play blocked:", err?.name || err);
+      // 사용자가 버튼/입력 등 또 다른 제스처를 하면 다시 시도되도록 남겨둠
+      // (bgmStarted는 여전히 false라 다음 제스처에서 재시도)
+    });
   }
 }
 
@@ -258,7 +271,7 @@ function damageMonster() {
 // ===== 입력/제출 =====
 function handleSubmit() {
   if (heroHealth <= 0) return;
-  const typed = input.value.trim();
+  const typed = norm(input.value.trim());
   if (typed === currentWord) {
     damageMonster();
     setNewWord();
@@ -290,22 +303,24 @@ function handleSubmit() {
   input.value = "";
 }
 
+if (input) {
+  input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    if (isComposing || e.isComposing) return;  // ← 조합 중이면 무시
+    e.preventDefault();
+    startBgmIfAllowed();
+    handleSubmit();
+  }
+}, { passive: false });
+
 if (typingForm) {
   typingForm.addEventListener("submit", (e) => {
+    if (isComposing) { e.preventDefault(); return; }  // ← 조합 중이면 무시
     e.preventDefault();
     startBgmIfAllowed();
     handleSubmit();
   });
 }
-
-if (input) {
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      startBgmIfAllowed();
-      handleSubmit();
-    }
-  }, { passive: false });
 
   input.addEventListener("focus", () => {
     startBgmIfAllowed();
