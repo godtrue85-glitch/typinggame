@@ -1,3 +1,7 @@
+document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
+document.addEventListener("touchstart", unlockAudioOnce, { once: true, passive: true });
+document.addEventListener("keydown", unlockAudioOnce, { once: true });
+
 // ===== 상태값 =====
 const stageWords = {
   1: ["주스", "물", "우유"],
@@ -35,7 +39,6 @@ const gameOverText = document.getElementById("game-over");
 const stageText = document.getElementById("stage-indicator");
 const retryBtn = document.getElementById("retry-btn");
 const typingForm = document.getElementById("typing-form");
-const submitBtn  = document.getElementById("submit-btn");
 
 const musicIcon = document.getElementById("music-icon");
 const muteBtn = document.getElementById("mute-btn");
@@ -52,7 +55,7 @@ const audioIds = ["bgm","hero-hit-sound","game-over-bgm","gold-sound","hit-sound
 
 // ===== BGM 시작 보장 & 오디오 언락 =====
 function startBgmIfAllowed() {
-  if (bgmStarted || isMuted || !bgm) return;
+  if (bgmStarted || isMuted || !bgm  || isMusicPlaying) return;
   bgm.volume = 0.4;
   const p = bgm.play();
   if (p && p.then) {
@@ -80,11 +83,6 @@ function unlockAudioOnce() {
   startBgmIfAllowed();
 }
 
-// 최초 1회: 아무 제스처에서 언락
-document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
-document.addEventListener("touchstart", unlockAudioOnce, { once: true, passive: true });
-document.addEventListener("keydown", unlockAudioOnce, { once: true });
-
 // ===== 마스터 음소거 =====
 function setMasterMute(mute) {
   isMuted = mute;
@@ -107,7 +105,10 @@ if (muteBtn) {
 
 // ===== 게임 로직 =====
 function setNewWord() {
-  const wordsForStage = stageWords[stage] || stageWords[Math.max(...Object.keys(stageWords))];
+  const stages = Object.keys(stageWords).map(Number);
+  const lastStage = Math.max(...stages);
+  const wordsForStage = stageWords[stage] || stageWords[lastStage];
+
   currentWord = wordsForStage[Math.floor(Math.random() * wordsForStage.length)];
   wordDiv.textContent = currentWord;
   input.value = "";
@@ -186,6 +187,7 @@ function playSound(id, volume = 1.0) {
   if (!srcEl) return;
   const s = srcEl.cloneNode(true);
   s.volume = volume;
+  s.muted = isMuted;
   document.body.appendChild(s);
   s.play().catch(err => console.log("play error:", id, err));
   s.addEventListener("ended", () => s.remove());
