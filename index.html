@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <!-- 반응형 & iOS 확대 방지 -->
@@ -21,21 +23,20 @@
       <div id="gold-message"></div>
     </div>
 
+    <!-- 효과음/배경음 -->
     <audio id="hero-hit-sound" src="sounds/hero-hit.mp3" preload="auto"></audio>
-    <div id="game-over" class="game-over hidden">Game Over</div>
-    <button id="retry-btn" class="hidden" type="button" aria-label="다시 도전">재도전</button>
     <audio id="game-over-bgm" src="sounds/game-over.mp3" preload="auto"></audio>
     <audio id="bgm" src="sounds/fantasy_background.mp3" preload="auto" loop></audio>
 
-    <!-- form으로 감싸서 모바일 엔터 처리 안정화 -->
+    <!-- 입력 영역 (form) -->
     <form id="typing-form" class="typing-area" autocomplete="off">
       <div class="info">
         <span id="score">무찌른 몬스터 수: 0</span>
         <span id="gold">얻은 금화: 0</span>
       </div>
+
       <div class="word-box" id="word">사과</div>
 
-      <!-- 모바일 키보드 최적화 -->
       <input
         type="text"
         id="input"
@@ -47,20 +48,21 @@
         aria-label="단어 입력"
       />
 
-      <!-- 터치용 제출 버튼 -->
       <button id="submit-btn" type="submit" class="primary-btn" aria-label="입력 제출">확인</button>
 
       <div class="music-toggle">
-  <button id="mute-btn" type="button" aria-label="소리 켜기/끄기" aria-pressed="false">
-    <img id="music-icon" src="icons/music-on.png" alt="음악 아이콘" />
-  </button>
-</div>
+        <button id="mute-btn" type="button" aria-label="소리 켜기/끄기" aria-pressed="false">
+          <img id="music-icon" src="icons/music-on.png" alt="음악 아이콘" />
+        </button>
+      </div>
+    </form>
 
-  <audio id="gold-sound" src="sounds/gold.mp3" preload="auto"></audio>
-  <audio id="hit-sound" src="sounds/hit.mp3" preload="auto"></audio>
+    <!-- 나머지 효과음 -->
+    <audio id="gold-sound" src="sounds/gold.mp3" preload="auto"></audio>
+    <audio id="hit-sound" src="sounds/hit.mp3" preload="auto"></audio>
+  </div>
+
+  <!-- 스크립트는 항상 마지막에 -->
   <script src="script.js"></script>
 </body>
-<<<<<<< HEAD
-=======
-
->>>>>>> 8ae909cbc1a498d0e7f6c50efb8bece181400d1a
+</html>
