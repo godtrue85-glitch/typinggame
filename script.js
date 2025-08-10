@@ -1,3 +1,9 @@
+document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
+if (!('PointerEvent' in window)) {
+  document.addEventListener("touchstart", unlockAudioOnce, {once: true, passive: true })
+}
+document.addEventListener("keydown", unlockAudioOnce, { once: true });
+
 // ===== 상태값 =====
 const stageWords = {
   1: ["주스", "물", "우유"],
@@ -35,21 +41,23 @@ const gameOverText = document.getElementById("game-over");
 const stageText = document.getElementById("stage-indicator");
 const retryBtn = document.getElementById("retry-btn");
 const typingForm = document.getElementById("typing-form");
+
 const musicIcon = document.getElementById("music-icon");
 const muteBtn = document.getElementById("mute-btn");
+
 const bgm = document.getElementById("bgm");
 
 const monsterImages = [
-  "monsters/monster1.png", "monsters/monster2.png", "monsters/monster3.png",
-  "monsters/monster4.png", "monsters/monster5.png", "monsters/monster6.png"
+  "monsters/monster1.png","monsters/monster2.png","monsters/monster3.png",
+  "monsters/monster4.png","monsters/monster5.png","monsters/monster6.png"
 ];
-const bossImages = ["monsters/boss1.png", "monsters/boss2.png", "monsters/boss3.png"];
+const bossImages = ["monsters/boss1.png","monsters/boss2.png","monsters/boss3.png"];
 
-const audioIds = ["bgm", "hero-hit-sound", "game-over-bgm", "gold-sound", "hit-sound"];
+const audioIds = ["bgm","hero-hit-sound","game-over-bgm","gold-sound","hit-sound"];
 
 // ===== BGM 시작 보장 & 오디오 언락 =====
 function startBgmIfAllowed() {
-  if (bgmStarted || isMuted || !bgm || isMusicPlaying) return;
+  if (bgmStarted || isMuted || !bgm  || isMusicPlaying) return;
   bgm.volume = 0.4;
   const p = bgm.play();
   if (p && p.then) {
@@ -61,17 +69,34 @@ function startBgmIfAllowed() {
   }
 }
 
+function positionHearts() {
+  const heroEl = document.getElementById('hero');
+  if (!heroEl || !heroHearts) return;
+
+  // 히어로 이미지가 준비되지 않았으면 나중에 다시 시도
+  const h = heroEl.clientHeight || heroEl.naturalHeight || 0;
+  if (!h) {
+    // 이미지 로드 후 다시 시도
+    heroEl.addEventListener('load', positionHearts, { once: true });
+    return;
+  }
+
+  const baseBottom = 8;      // .hero { bottom: 8px; }와 동일
+  const offsetFromHead = 16; // 머리 위 여백
+
+  // hero의 좌표를 기준으로 살짝 오른쪽으로 치우치게
+  heroHearts.style.left = (heroEl.offsetLeft + 16) + 'px';
+  heroHearts.style.bottom = (baseBottom + h + offsetFromHead) + 'px';
+}
+
 function primeAudio() {
   audioIds.forEach(id => {
     const el = document.getElementById(id);
-    if (!el) {
-      console.warn(`Audio element with ID ${id} not found.`);
-      return;
-    }
+    if (!el) return;
     try {
       if (id === "bgm") el.volume = 0.4;
-      el.play().then(() => { el.pause(); el.currentTime = 0; }).catch(() => {});
-    } catch (_) {}
+      el.play().then(() => { el.pause(); el.currentTime = 0; }).catch(()=>{});
+    } catch(_) {}
   });
 }
 
@@ -79,13 +104,6 @@ function unlockAudioOnce() {
   primeAudio();
   startBgmIfAllowed();
 }
-
-// 오디오 언락 이벤트 최적화
-document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
-if (!('PointerEvent' in window)) {
-  document.addEventListener("touchstart", unlockAudioOnce, { once: true, passive: true });
-}
-document.addEventListener("keydown", unlockAudioOnce, { once: true });
 
 // ===== 마스터 음소거 =====
 function setMasterMute(mute) {
@@ -102,7 +120,7 @@ if (muteBtn) {
   muteBtn.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    startBgmIfAllowed();
+    startBgmIfAllowed();      // 첫 탭에서 BGM 보조 시작
     setMasterMute(!isMuted);
   });
 }
@@ -112,24 +130,23 @@ function setNewWord() {
   const stages = Object.keys(stageWords).map(Number);
   const lastStage = Math.max(...stages);
   const wordsForStage = stageWords[stage] || stageWords[lastStage];
+
   currentWord = wordsForStage[Math.floor(Math.random() * wordsForStage.length)];
-  if (wordDiv) wordDiv.textContent = currentWord;
-  if (input) input.value = "";
+  wordDiv.textContent = currentWord;
+  input.value = "";
 }
 
 function setNewMonster() {
-  if (score > 0 && score % 10 === 0 && !isBossStage) {
+  if (score > 0 && score % 1 === 0 && !isBossStage) {
     isBossStage = true;
     const bossIndex = Math.min(stage - 1, bossImages.length - 1);
-    if (monster) {
-      monster.src = bossImages[bossIndex];
-      monster.classList.add("boss-appear");
-      setTimeout(() => {
-        monster.classList.remove("boss-appear");
-        shakeScreen();
-        spawnDustParticles();
-      }, 1000);
-    }
+    monster.src = bossImages[bossIndex];
+    monster.classList.add("boss-appear");
+    setTimeout(() => {
+      monster.classList.remove("boss-appear");
+      shakeScreen();
+      spawnDustParticles();
+    }, 1000);
     monsterHealth = bossHealth;
     previousMonsterIndex = -1;
   } else {
@@ -139,7 +156,7 @@ function setNewMonster() {
       randomIndex = Math.floor(Math.random() * monsterImages.length);
     } while (randomIndex === previousMonsterIndex && monsterImages.length > 1);
     previousMonsterIndex = randomIndex;
-    if (monster) monster.src = monsterImages[randomIndex];
+    monster.src = monsterImages[randomIndex];
     monsterHealth = maxHealth;
   }
   updateMonsterHealthBar();
@@ -147,23 +164,18 @@ function setNewMonster() {
 
 function updateMonsterHealthBar() {
   const bar = document.querySelector('.health-bar-inner');
-  if (bar) {
-    const percent = (monsterHealth / (isBossStage ? bossHealth : maxHealth)) * 100;
-    bar.style.width = percent + '%';
-  }
+  const percent = (monsterHealth / (isBossStage ? bossHealth : maxHealth)) * 100;
+  bar.style.width = percent + '%';
 }
 
 function shakeScreen() {
   const container = document.querySelector('.game-container');
-  if (container) {
-    container.classList.add('shake-screen');
-    setTimeout(() => container.classList.remove('shake-screen'), 300);
-  }
+  container.classList.add('shake-screen');
+  setTimeout(() => container.classList.remove('shake-screen'), 300);
 }
 
 function spawnDustParticles() {
   const container = document.getElementById("dust-container");
-  if (!container) return;
   for (let i = 0; i < 6; i++) {
     const dust = document.createElement("div");
     dust.className = "dust";
@@ -171,40 +183,30 @@ function spawnDustParticles() {
     dust.style.setProperty('--x', x);
     dust.style.left = `calc(50% + ${x})`;
     container.appendChild(dust);
-    dust.animate([
-      { transform: 'translateY(0)', opacity: 1 },
-      { transform: 'translateY(-50px)', opacity: 0 }
-    ], { duration: 500, easing: 'ease-out' }).onfinish = () => dust.remove();
+    setTimeout(() => dust.remove(), 500);
   }
 }
 
 function updateHeroHearts() {
-  if (heroHearts) {
-    heroHearts.innerHTML = "";
-    for (let i = 0; i < heroHealth; i++) {
-      const heart = document.createElement("span");
-      heart.textContent = "❤️";
-      heart.style.fontSize = "25px";
-      heart.style.margin = "0 2px";
-      heroHearts.appendChild(heart);
-    }
+  heroHearts.innerHTML = "";
+  for (let i = 0; i < heroHealth; i++) {
+    const heart = document.createElement("span");
+    heart.textContent = "❤️";
+    heart.style.fontSize = "25px";
+    heart.style.margin = "0 2px";
+    heroHearts.appendChild(heart);
   }
 }
 
 function showGoldMessage(amount) {
-  if (goldMessage) {
-    goldMessage.textContent = `+${amount} gold`;
-    goldMessage.style.opacity = 1;
-    setTimeout(() => goldMessage.style.opacity = 0, 1000);
-  }
+  goldMessage.textContent = `+${amount} gold`;
+  goldMessage.style.opacity = 1;
+  setTimeout(() => goldMessage.style.opacity = 0, 1000);
 }
 
 function playSound(id, volume = 1.0) {
   const srcEl = document.getElementById(id);
-  if (!srcEl) {
-    console.warn(`Audio element with ID ${id} not found.`);
-    return;
-  }
+  if (!srcEl) return;
   const s = srcEl.cloneNode(true);
   s.volume = volume;
   s.muted = isMuted;
@@ -216,11 +218,11 @@ function playSound(id, volume = 1.0) {
 function playAttackEffect() {
   const hero = document.querySelector('.hero');
   const m = document.querySelector('.monster');
-  if (hero) hero.classList.add('attack');
-  if (m) m.classList.add('hit');
+  hero.classList.add('attack');
+  m.classList.add('hit');
   setTimeout(() => {
-    if (hero) hero.classList.remove('attack');
-    if (m) m.classList.remove('hit');
+    hero.classList.remove('attack');
+    m.classList.remove('hit');
   }, 300);
 }
 
@@ -233,21 +235,21 @@ function damageMonster() {
 
     if (monsterHealth <= 0) {
       score++;
-      if (scoreSpan) scoreSpan.textContent = "무찌른 몬스터 수: " + score;
+      scoreSpan.textContent = "무찌른 몬스터 수: " + score;
 
       if (isBossStage) {
         gold += 10;
         showGoldMessage(10);
         playSound("gold-sound", 0.3);
         stage++;
-        if (stageText) stageText.textContent = `Stage ${stage} ${isBossStage ? "(Boss)" : ""}`;
+        stageText.textContent = `Stage ${stage}`;
       } else {
         const earnedGold = Math.floor(Math.random() * 5) + 1;
         gold += earnedGold;
         showGoldMessage(earnedGold);
         playSound("gold-sound", 0.3);
       }
-      if (goldSpan) goldSpan.textContent = "얻은 금화: " + gold;
+      goldSpan.textContent = "얻은 금화: " + gold;
       setTimeout(setNewMonster, 500);
     }
   }
@@ -256,47 +258,36 @@ function damageMonster() {
 // ===== 입력/제출 =====
 function handleSubmit() {
   if (heroHealth <= 0) return;
-  const typed = input ? input.value.trim() : "";
+  const typed = input.value.trim();
   if (typed === currentWord) {
     damageMonster();
     setNewWord();
-    if (input) input.classList.remove("error");
   } else {
     heroHealth--;
     updateHeroHearts();
     playSound("hero-hit-sound");
-    if (monster) {
-      monster.classList.add("attack");
-      setTimeout(() => monster.classList.remove("attack"), 400);
-    }
-    if (input) {
-      input.classList.add("error");
-      setTimeout(() => input.classList.remove("error"), 300);
-    }
+    monster.classList.add("attack");
+    setTimeout(() => monster.classList.remove("attack"), 400);
 
     if (heroHealth <= 0) {
-      if (input) input.disabled = true;
+      input.disabled = true;
       if (bgm) { bgm.pause(); bgm.currentTime = 0; }
       const gameOverBgm = document.getElementById("game-over-bgm");
       if (gameOverBgm) {
         gameOverBgm.volume = 0.8;
         gameOverBgm.currentTime = 0;
-        gameOverBgm.play().catch(() => {});
+        gameOverBgm.play().catch(()=>{});
       }
-      if (gameOverText) {
-        gameOverText.classList.remove("hidden");
-        void gameOverText.offsetHeight;
-        gameOverText.classList.add("show-game-over");
-      }
+      gameOverText.classList.remove("hidden");
+      void gameOverText.offsetHeight;
+      gameOverText.classList.add("show-game-over");
       setTimeout(() => {
-        if (retryBtn) {
-          retryBtn.classList.remove("hidden");
-          retryBtn.classList.add("show");
-        }
+        retryBtn.classList.remove("hidden");
+        retryBtn.classList.add("show");
       }, 1000);
     }
   }
-  if (input) input.value = "";
+  input.value = "";
 }
 
 if (typingForm) {
@@ -320,63 +311,64 @@ if (input) {
     startBgmIfAllowed();
     requestAnimationFrame(() => {
       input.scrollIntoView({ block: "center", behavior: "smooth" });
-    });
   });
-}
-
-// 모바일 키보드 뷰포트 조정
-window.visualViewport.addEventListener("resize", () => {
-  if (input && input === document.activeElement) {
-    input.scrollIntoView({ block: "center", behavior: "smooth" });
-  }
 });
+}
 
 // ===== 재도전 =====
-if (retryBtn) {
-  retryBtn.addEventListener("click", () => {
-    score = 0;
-    gold = 0;
-    heroHealth = 3;
-    stage = 1;
-    isBossStage = false;
-    if (input) input.disabled = false;
+retryBtn.addEventListener("click", () => {
+  score = 0;
+  gold = 0;
+  heroHealth = 3;
+  stage = 1;
+  isBossStage = false;
+  input.disabled = false;
 
-    const gameOverBgm = document.getElementById("game-over-bgm");
-    if (gameOverBgm) { gameOverBgm.pause(); gameOverBgm.currentTime = 0; }
+  const gameOverBgm = document.getElementById("game-over-bgm");
+  if (gameOverBgm) { gameOverBgm.pause(); gameOverBgm.currentTime = 0; }
 
-    if (!isMuted && bgm) {
-      bgm.currentTime = 0;
-      bgm.volume = 0.4;
-      bgmStarted = false;
-      startBgmIfAllowed();
-    }
-
-    if (gameOverText) {
-      gameOverText.classList.add("hidden");
-      gameOverText.classList.remove("show-game-over");
-    }
-    if (retryBtn) {
-      retryBtn.classList.add("hidden");
-      retryBtn.classList.remove("show");
-    }
-
-    if (scoreSpan) scoreSpan.textContent = "무찌른 몬스터 수: 0";
-    if (goldSpan) goldSpan.textContent = "얻은 금화: 0";
-    if (stageText) stageText.textContent = "Stage 1";
-
-    updateHeroHearts();
-    setNewMonster();
-    setNewWord();
-  });
-}
-
-// ===== 초기화 =====
-window.addEventListener("load", () => {
-  if (!wordDiv || !input || !monster || !scoreSpan || !goldSpan || !heroHearts || !stageText) {
-    console.error("Required DOM elements are missing!");
-    return;
+  if (!isMuted && bgm) {
+    bgm.currentTime = 0;
+    bgm.volume = 0.4;
+    bgmStarted = false;
+    startBgmIfAllowed();
   }
+
+  gameOverText.classList.add("hidden");
+  gameOverText.classList.remove("show-game-over");
+  retryBtn.classList.add("hidden");
+  retryBtn.classList.remove("show");
+
+  scoreSpan.textContent = "무찌른 몬스터 수: 0";
+  goldSpan.textContent = "얻은 금화: 0";
+  stageText.textContent = "Stage 1";
+
   updateHeroHearts();
   setNewMonster();
   setNewWord();
 });
+
+function initUI() {
+  updateHeroHearts();   // 하트 DOM 채우기
+  setNewMonster();
+  setNewWord();
+
+  // 히어로 이미지가 준비되면 위치 잡기
+  const heroEl = document.getElementById('hero');
+  if (heroEl && heroEl.complete && heroEl.naturalHeight > 0) {
+    positionHearts();
+  } else if (heroEl) {
+    heroEl.addEventListener('load', positionHearts, { once: true });
+    // 혹시 load 이벤트를 못 받는 경우 대비해 한 번 더 시도
+    requestAnimationFrame(() => setTimeout(positionHearts, 100));
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initUI, { once: true });
+} else {
+  initUI();
+}
+
+// 화면 회전/리사이즈 때도 재배치
+window.addEventListener('resize', positionHearts);
