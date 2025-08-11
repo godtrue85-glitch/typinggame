@@ -398,6 +398,3 @@ if (document.readyState === 'loading') {
 
 // 화면 회전/리사이즈 때도 재배치
 window.addEventListener('resize', positionHearts);
-
-
-
