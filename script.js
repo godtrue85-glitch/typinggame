@@ -38,7 +38,7 @@ const musicIcon = document.getElementById("music-icon");
 const muteBtn = document.getElementById("mute-btn");
 
 // 효과음 ID들
-const audioIds = ["bgm","hero-hit-sound","game-over-bgm","gold-sound","hit-sound"];
+const sfxIds = ["hero-hit-sound","game-over-bgm","gold-sound","hit-sound"];
 
 // 비교용 정규화 (NFC + 제로폭문자 제거)
 const norm = (s) => (s || "").normalize('NFC').replace(/[\u200B-\u200D\uFEFF]/g, "");
@@ -57,18 +57,29 @@ const audioState = {
   muted:  false,    // 마스터 음소거
 };
 
+
 function primeSfx() {
-  audioIds.forEach(id => {
+  sfxIds.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     try {
-      if (id === "bgm") el.volume = 0.4;
-      const p = el.play();
-      if (p && p.then) {
-        p.then(() => { el.pause(); el.currentTime = 0; }).catch(() => {});
-      }
+      el.play().then(() => { el.pause(); el.currentTime = 0; }).catch(()=>{});
     } catch(_) {}
   });
+}
+
+let audioUnlocked = false;
+function unlockAudioOnce() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  primeSfx();            // SFX만 프라임
+  startBgmIfAllowed();   // BGM 시작 시도
+}
+
+document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
+document.addEventListener("keydown",     unlockAudioOnce, { once: true });
+if (!('PointerEvent' in window)) {
+  document.addEventListener("touchstart", unlockAudioOnce, { once: true, passive: true });
 }
 
 function tryStartBgm() {
@@ -100,12 +111,6 @@ function unlockAudioOnce() {
   primeSfx();
   tryStartBgm();
 }
-document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
-document.addEventListener("keydown",     unlockAudioOnce, { once: true });
-if (!("PointerEvent" in window)) {
-  document.addEventListener("touchstart", unlockAudioOnce, { once: true, passive: true });
-}
-if (input) input.addEventListener("focus", () => tryStartBgm(), { once: true });
 
 function setMasterMute(mute) {
   audioState.muted = !!mute;
