@@ -168,6 +168,7 @@ body {
 
 /* 게임오버/재도전 */
 #game-over {
+  white-space: nowrap;
   position: absolute; /* 키보드 영향 최소화 */
   top: 30%; left: 50%; transform: translate(-50%, -200%);
   font-size: clamp(36px, 10vw, 48px);
