@@ -168,7 +168,7 @@ body {
 
 /* 게임오버/재도전 */
 #game-over {
-  position: fixed; /* 키보드 영향 최소화 */
+  position: absolute; /* 키보드 영향 최소화 */
   top: 40%; left: 50%; transform: translate(-50%, -200%);
   font-size: clamp(36px, 10vw, 48px);
   font-weight: bold; color: red; background: #fff;
@@ -179,8 +179,8 @@ body {
 #game-over.show-game-over { opacity: 1; transform: translate(-50%, -50%); }
 
 #retry-btn {
-  position: fixed;
-  top: 45%; left: 50%; transform: translate(-50%, 0);
+  position: absolute;
+  top: calc(50% + 60px); left: 50%; transform: translate(-50%);
   font-size: 18px; padding: 12px 24px;
   background: #ff4d4d; color: #fff; border: none; border-radius: 8px; cursor: pointer;
   font-family: 'Noto Sans KR', sans-serif; z-index: 999; opacity: 0; transition: opacity 0.5s ease;
