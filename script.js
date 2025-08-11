@@ -37,19 +37,8 @@ const stageText = document.getElementById("stage-indicator");
 const retryBtn = document.getElementById("retry-btn");
 const typingForm = document.getElementById("typing-form");
 
-// 비교용 정규화 유틸 (NFC + 제로폭문자 제거)
-const norm = (s) => (s || "").normalize('NFC').replace(/[\u200B-\u200D\uFEFF]/g, "");
-
-// 한글 IME 조합 처리
-let isComposing = false;
-if (input) {
-input.addEventListener('compositionstart', () => { isComposing = true; });
-input.addEventListener('compositionend', () => { isComposing = false; });
-}
-
 const musicIcon = document.getElementById("music-icon");
 const muteBtn = document.getElementById("mute-btn");
-
 const bgm = document.getElementById("bgm");
 
 const monsterImages = [
@@ -60,12 +49,22 @@ const bossImages = ["monsters/boss1.png","monsters/boss2.png","monsters/boss3.pn
 
 const audioIds = ["bgm","hero-hit-sound","game-over-bgm","gold-sound","hit-sound"];
 
+// 비교용 정규화 유틸 (NFC + 제로폭문자 제거)
+const norm = (s) => (s || "").normalize('NFC').replace(/[\u200B-\u200D\uFEFF]/g, "");
+
+// 한글 IME 조합 처리
+let isComposing = false;
+if (input) {
+  input.addEventListener('compositionstart', () => { isComposing = true; });
+  input.addEventListener('compositionend', () => { isComposing = false; });
+}
+
 // ===== BGM 시작 보장 & 오디오 언락 =====
 function startBgmIfAllowed() {
   if (bgmStarted || isMuted || !bgm || isMusicPlaying) return;
   bgm.volume = 0.4;
   const p = bgm.play();
-  if (p && p.then) {
+  if (p && typeof p.then === "function") {
     p.then(() => {
       bgmStarted = true;
       isMusicPlaying = true;
@@ -73,30 +72,8 @@ function startBgmIfAllowed() {
       console.log("[BGM] started");
     }).catch((err) => {
       console.warn("[BGM] play blocked:", err?.name || err);
-      // 사용자가 버튼/입력 등 또 다른 제스처를 하면 다시 시도되도록 남겨둠
-      // (bgmStarted는 여전히 false라 다음 제스처에서 재시도)
     });
   }
-}
-
-function positionHearts() {
-  const heroEl = document.getElementById('hero');
-  if (!heroEl || !heroHearts) return;
-
-  // 히어로 이미지가 준비되지 않았으면 나중에 다시 시도
-  const h = heroEl.clientHeight || heroEl.naturalHeight || 0;
-  if (!h) {
-    // 이미지 로드 후 다시 시도
-    heroEl.addEventListener('load', positionHearts, { once: true });
-    return;
-  }
-
-  const baseBottom = 8;      // .hero { bottom: 8px; }와 동일
-  const offsetFromHead = 16; // 머리 위 여백
-
-  // hero의 좌표를 기준으로 살짝 오른쪽으로 치우치게
-  heroHearts.style.left = (heroEl.offsetLeft + 16) + 'px';
-  heroHearts.style.bottom = (baseBottom + h + offsetFromHead) + 'px';
 }
 
 function primeAudio() {
@@ -111,13 +88,15 @@ function primeAudio() {
 }
 
 function unlockAudioOnce() {
+  console.log("[AUDIO] unlock fired");
   primeAudio();
   startBgmIfAllowed();
 }
 
+// 언락 핸들러 등록 (함수 정의 이후)
 document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
 if (!('PointerEvent' in window)) {
-  document.addEventListener("touchstart", unlockAudioOnce, {once: true, passive: true })
+  document.addEventListener("touchstart", unlockAudioOnce, { once: true, passive: true });
 }
 document.addEventListener("keydown", unlockAudioOnce, { once: true });
 
@@ -148,12 +127,13 @@ function setNewWord() {
   const wordsForStage = stageWords[stage] || stageWords[lastStage];
 
   currentWord = wordsForStage[Math.floor(Math.random() * wordsForStage.length)];
+  console.log("[WORD] set:", currentWord);
   wordDiv.textContent = currentWord;
   input.value = "";
 }
 
 function setNewMonster() {
-  if (score > 0 && score % 1 === 0 && !isBossStage) {
+  if (score > 0 && score % 1 === 0 && !isBossStage) { // ← 원하면 숫자 조정
     isBossStage = true;
     const bossIndex = Math.min(stage - 1, bossImages.length - 1);
     monster.src = bossImages[bossIndex];
@@ -273,9 +253,16 @@ function damageMonster() {
 
 // ===== 입력/제출 =====
 function handleSubmit() {
-    if (heroHealth <= 0) return;
+  if (!gameReady) {
+    console.warn("[SUBMIT] ignored: not ready");
+    return;
+  }
+  if (heroHealth <= 0) return;
+
   const typed = norm(input.value.trim());
   const answer = norm(currentWord);
+
+  console.log("[SUBMIT] typed:", typed, "answer:", answer);
 
   if (typed === answer) {
     damageMonster();
@@ -310,25 +297,25 @@ function handleSubmit() {
 
 if (input) {
   input.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    if (isComposing || e.isComposing) return;  // ← 조합 중이면 무시
-    e.preventDefault();
-    startBgmIfAllowed();
-    handleSubmit();
-  }
-}, { passive: false });
+    if (e.key === "Enter") {
+      if (isComposing || e.isComposing) return;  // 조합 중이면 무시
+      e.preventDefault();
+      startBgmIfAllowed();
+      handleSubmit();
+    }
+  }, { passive: false });
 
   input.addEventListener("focus", () => {
     startBgmIfAllowed();
     requestAnimationFrame(() => {
       input.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
   });
-});
 }
 
 if (typingForm) {
   typingForm.addEventListener("submit", (e) => {
-    if (isComposing) { e.preventDefault(); return; }  // ← 조합 중이면 무시
+    if (isComposing) { e.preventDefault(); return; }  // 조합 중이면 무시
     e.preventDefault();
     startBgmIfAllowed();
     handleSubmit();
@@ -366,28 +353,46 @@ retryBtn.addEventListener("click", () => {
   updateHeroHearts();
   setNewMonster();
   setNewWord();
-  console.log("[WORD] set:", currentWord);
 });
 
+// ===== 초기화 =====
+function positionHearts() {
+  const heroEl = document.getElementById('hero');
+  if (!heroEl || !heroHearts) return;
+
+  const h = heroEl.clientHeight || heroEl.naturalHeight || 0;
+  if (!h) {
+    heroEl.addEventListener('load', positionHearts, { once: true });
+    return;
+  }
+  const baseBottom = 8;
+  const offsetFromHead = 16;
+
+  heroHearts.style.left = (heroEl.offsetLeft + 16) + 'px';
+  heroHearts.style.bottom = (baseBottom + h + offsetFromHead) + 'px';
+}
+
 function initUI() {
-  updateHeroHearts();   // 하트 DOM 채우기
+  updateHeroHearts();
   setNewMonster();
   setNewWord();
-  gameReady = true;
-  console.log("[INIT] ready with word:", currentWord);
-  // 히어로 이미지가 준비되면 위치 잡기
-  
-  const heroEl = document.getElementById('hero');
 
+  // 히어로 이미지가 준비되면 위치 잡기
+  const heroEl = document.getElementById('hero');
   if (heroEl && heroEl.complete && heroEl.naturalHeight > 0) {
     positionHearts();
   } else if (heroEl) {
     heroEl.addEventListener('load', positionHearts, { once: true });
-    requestAnimationFrame(() => {
-     positionHearts();
-     setTimeout(positionHearts, 120);
+  }
+
+  // 페인트 직후/지연 배치(백업)
+  requestAnimationFrame(() => {
+    positionHearts();
+    setTimeout(positionHearts, 120);
   });
- }
+
+  gameReady = true;
+  console.log("[INIT] ready with word:", currentWord);
 }
 
 if (document.readyState === 'loading') {
