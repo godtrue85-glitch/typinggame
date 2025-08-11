@@ -273,11 +273,7 @@ function damageMonster() {
 
 // ===== 입력/제출 =====
 function handleSubmit() {
-  if (!gameReady) {                           // ✅ 아직 단어 준비 전이면
-    console.warn("[SUBMIT] ignored: not ready");
-    return;
-  }
-  if (heroHealth <= 0) return;
+    if (heroHealth <= 0) return;
   const typed = norm(input.value.trim());
   const answer = norm(currentWord);
 
@@ -322,6 +318,14 @@ if (input) {
   }
 }, { passive: false });
 
+  input.addEventListener("focus", () => {
+    startBgmIfAllowed();
+    requestAnimationFrame(() => {
+      input.scrollIntoView({ block: "center", behavior: "smooth" });
+  });
+});
+}
+
 if (typingForm) {
   typingForm.addEventListener("submit", (e) => {
     if (isComposing) { e.preventDefault(); return; }  // ← 조합 중이면 무시
@@ -329,14 +333,6 @@ if (typingForm) {
     startBgmIfAllowed();
     handleSubmit();
   });
-}
-
-  input.addEventListener("focus", () => {
-    startBgmIfAllowed();
-    requestAnimationFrame(() => {
-      input.scrollIntoView({ block: "center", behavior: "smooth" });
-  });
-});
 }
 
 // ===== 재도전 =====
