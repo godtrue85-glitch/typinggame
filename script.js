@@ -19,10 +19,7 @@ let bossHealth = 10;
 
 let previousMonsterIndex = -1;
 
-// 오디오 상태
-let isMusicPlaying = false;
-
-// ===== DOM 참조 (한 번만) =====
+// ===== DOM 참조 (모두 정의) =====
 const wordDiv = document.getElementById("word");
 const scoreSpan = document.getElementById("score");
 const monster = document.getElementById("monster");
@@ -31,186 +28,141 @@ const goldMessage = document.getElementById("gold-message");
 const heroHearts = document.getElementById("hero-hearts");
 const gameOverText = document.getElementById("game-over");
 const stageText = document.getElementById("stage-indicator");
-
-const musicIcon = document.getElementById("music-icon");
-const muteBtn = document.getElementById("mute-btn");
-const bgm = document.getElementById("bgm");
-let bgmStarted = false;
-let isMuted = false;
-
-function tryStartBgm(force = false) {
-  if (!bgm) return;
-  if (isMuted) { console.log("[BGM] muted, skip"); return; }
-  if (!force && bgmStarted) { console.log("[BGM] already started"); return; }
-
-  // 진단 로그
-  console.log("[BGM] tryStart", {
-    paused: bgm.paused,
-    readyState: bgm.readyState,   // 0~4
-    src: bgm.currentSrc
-  });
-
-  bgm.muted = false;
-  bgm.volume = 0.4;
-
-  const p = bgm.play();
-  if (p && typeof p.then === "function") {
-    p.then(() => {
-      bgmStarted = true;
-      console.log("[BGM] playing OK");
-    }).catch(err => {
-      console.warn("[BGM] play blocked:", err?.name || err);
-    });
-    }
-  }
-
-window.addEventListener("pointerdown", () => tryStartBgm(), { once: true });
-if (!("PointerEvent" in window)) {
-  window.addEventListener("touchstart", () => tryStartBgm(), { once: true, passive: true });
-}
-window.addEventListener("keydown", () => tryStartBgm(), { once: true });
-
-// 입력창 포커스/제출 시에도 보조 시도
-const input = document.getElementById("input");
 const typingForm = document.getElementById("typing-form");
-if (input) {
-  input.addEventListener("focus", () => tryStartBgm(), { once: true });
-}
-if (typingForm) {
-  typingForm.addEventListener("submit", () => tryStartBgm(), { once: true });
-}
-
-// 진단용 이벤트 핸들러
-if (bgm) {
-  ["loadstart","loadedmetadata","canplay","canplaythrough","play","pause","ended","stalled","suspend","error"].forEach(ev=>{
-    bgm.addEventListener(ev, e => console.log("[BGM ev]", ev, {readyState: bgm.readyState}));
-  });
-  bgm.addEventListener("error", () => {
-    const m = bgm.error && bgm.error.message ? bgm.error.message : bgm.error && bgm.error.code;
-    console.error("[BGM] audio error:", m);
-  });
-}
-
+const input = document.getElementById("input");
 const retryBtn = document.getElementById("retry-btn");
 
+// 오디오 관련 DOM
+const bgm = document.getElementById("bgm");
+const musicIcon = document.getElementById("music-icon");
+const muteBtn = document.getElementById("mute-btn");
+
+// 효과음 ID들
+const audioIds = ["bgm","hero-hit-sound","game-over-bgm","gold-sound","hit-sound"];
+
+// 비교용 정규화 (NFC + 제로폭문자 제거)
+const norm = (s) => (s || "").normalize('NFC').replace(/[\u200B-\u200D\uFEFF]/g, "");
+
+// ===== 한글 IME 조합 처리 =====
+let isComposing = false;
+if (input) {
+  input.addEventListener('compositionstart', () => { isComposing = true; });
+  input.addEventListener('compositionend',   () => { isComposing = false; });
+}
+
+// ===== Audio Module: 한 곳에서만 관리 =====
+const audioState = {
+  started: false,   // 사용자 제스처로 play 성공했는지
+  playing: false,   // 현재 재생 중인지
+  muted:  false,    // 마스터 음소거
+};
+
+function primeSfx() {
+  audioIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    try {
+      if (id === "bgm") el.volume = 0.4;
+      const p = el.play();
+      if (p && p.then) {
+        p.then(() => { el.pause(); el.currentTime = 0; }).catch(() => {});
+      }
+    } catch(_) {}
+  });
+}
+
+function tryStartBgm() {
+  if (!bgm || audioState.muted || audioState.playing) return;
+
+  const playNow = () => {
+    bgm.volume = 0.4;
+    const p = bgm.play();
+    if (p && p.then) {
+      p.then(() => {
+        audioState.started = true;
+        audioState.playing = true;
+        if (musicIcon) musicIcon.src = "icons/music-on.png";
+        console.log("[BGM] started");
+      }).catch(err => {
+        console.warn("[BGM] play blocked:", err?.name || err);
+      });
+    }
+  };
+
+  if (bgm.readyState < 1) {
+    bgm.addEventListener("loadedmetadata", playNow, { once: true });
+  } else {
+    playNow();
+  }
+}
+
+function unlockAudioOnce() {
+  primeSfx();
+  tryStartBgm();
+}
+document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
+document.addEventListener("keydown",     unlockAudioOnce, { once: true });
+if (!("PointerEvent" in window)) {
+  document.addEventListener("touchstart", unlockAudioOnce, { once: true, passive: true });
+}
+if (input) input.addEventListener("focus", () => tryStartBgm(), { once: true });
+
+function setMasterMute(mute) {
+  audioState.muted = !!mute;
+  audioIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.muted = audioState.muted;
+  });
+  if (musicIcon) musicIcon.src = audioState.muted ? "icons/music-off.png" : "icons/music-on.png";
+  if (muteBtn)   muteBtn.setAttribute("aria-pressed", String(audioState.muted));
+
+  if (audioState.muted) {
+    if (bgm) { try { bgm.pause(); } catch(_){} }
+    audioState.playing = false;
+  } else {
+    tryStartBgm();
+  }
+}
+if (muteBtn) {
+  muteBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    setMasterMute(!audioState.muted);
+  });
+}
+
+// 게임 흐름용 헬퍼
+function pauseBgm() {
+  if (bgm) {
+    try { bgm.pause(); } catch(_) {}
+    audioState.playing = false;
+  }
+}
+function resumeBgmFromStart() {
+  if (!bgm || audioState.muted) return;
+  try { bgm.currentTime = 0; } catch(_) {}
+  audioState.playing = false;
+  tryStartBgm();
+}
+
+// ===== 게임 로직 =====
 const monsterImages = [
   "monsters/monster1.png","monsters/monster2.png","monsters/monster3.png",
   "monsters/monster4.png","monsters/monster5.png","monsters/monster6.png"
 ];
 const bossImages = ["monsters/boss1.png","monsters/boss2.png","monsters/boss3.png"];
 
-const audioIds = ["bgm","hero-hit-sound","game-over-bgm","gold-sound","hit-sound"];
-
-// 비교용 정규화 유틸 (NFC + 제로폭문자 제거)
-const norm = (s) => (s || "").normalize('NFC').replace(/[\u200B-\u200D\uFEFF]/g, "");
-
-console.log(
-  "DOM check:",
-  !!document.getElementById("game-over"),
-  !!document.getElementById("retry-btn"),
-  !!document.getElementById("monster"),
-  !!document.getElementById("input"),
-  !!document.getElementById("typing-form")
-);
-
-// 한글 IME 조합 처리
-let isComposing = false;
-if (input) {
-  input.addEventListener('compositionstart', () => { isComposing = true; });
-  input.addEventListener('compositionend', () => { isComposing = false; });
-}
-
-function startBgmIfAllowed() {
-  if (bgmStarted || isMuted || !bgm || isMusicPlaying) return;
-
-  const tryPlay = () => {
-    bgm.volume = 0.4;
-    bgm.currentTime = 0; // 처음부터
-    bgm.play()
-      .then(() => {
-        bgmStarted = true;
-        isMusicPlaying = true;
-        if (musicIcon) musicIcon.src = "icons/music-on.png";
-        console.log("[BGM] started normally");
-      })
-      .catch(err => {
-        console.warn("[BGM] play blocked:", err);
-      });
-  };
-
-  if (bgm.readyState < 1) {
-    bgm.addEventListener("loadedmetadata", tryPlay, { once: true });
-  } else {
-    tryPlay();
-  }
-}
-
-// 유저 입력 시 반드시 호출
-document.addEventListener("pointerdown", startBgmIfAllowed, { once: true });
-document.addEventListener("keydown", startBgmIfAllowed, { once: true });
-
-function primeAudio() {
-  audioIds.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    try {
-      if (id === "bgm") el.volume = 0.4;
-      el.play().then(() => { el.pause(); el.currentTime = 0; }).catch(()=>{});
-    } catch(_) {}
-  });
-}
-
-function unlockAudioOnce() {
-  console.log("[AUDIO] unlock fired");
-  primeAudio();
-  startBgmIfAllowed();
-}
-
-// 언락 핸들러 등록 (함수 정의 이후)
-document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
-if (!('PointerEvent' in window)) {
-  document.addEventListener("touchstart", unlockAudioOnce, { once: true, passive: true });
-}
-document.addEventListener("keydown", unlockAudioOnce, { once: true });
-
-// ===== 마스터 음소거 =====
-function setMasterMute(mute) {
-  isMuted = mute;
-  const ids = ["bgm","hero-hit-sound","game-over-bgm","gold-sound","hit-sound"];
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.muted = mute;
-  });
-  if (!mute) {
-    tryStartBgm(true);
-  }
-  if (musicIcon) musicIcon.src = mute ? "icons/music-off.png" : "icons/music-on.png";
-  if (muteBtn) muteBtn.setAttribute("aria-pressed", String(mute));
-}
-
-if (muteBtn) {
-  muteBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    startBgmIfAllowed();      // 첫 탭에서 BGM 보조 시작
-    setMasterMute(!isMuted);
-  });
-}
-
-// ===== 게임 로직 =====
 function setNewWord() {
   const stages = Object.keys(stageWords).map(Number);
   const lastStage = Math.max(...stages);
   const wordsForStage = stageWords[stage] || stageWords[lastStage];
-
   currentWord = wordsForStage[Math.floor(Math.random() * wordsForStage.length)];
   console.log("[WORD] set:", currentWord);
   wordDiv.textContent = currentWord;
-  input.value = "";
+  if (input) input.value = "";
 }
 
 function setNewMonster() {
-  if (score > 0 && score % 1 === 0 && !isBossStage) { // ← 원하면 숫자 조정
+  if (score > 0 && score % 1 === 0 && !isBossStage) {
     isBossStage = true;
     const bossIndex = Math.min(stage - 1, bossImages.length - 1);
     monster.src = bossImages[bossIndex];
@@ -271,36 +223,6 @@ function updateHeroHearts() {
   }
 }
 
-function showGameOverUI() {
-  console.log("[GAMEOVER] show");
-  if (bgm) { try { bgm.pause(); bgm.currentTime = 0; } catch(_){} }
-
-  const gameOverBgm = document.getElementById("game-over-bgm");
-  if (gameOverBgm) {
-    gameOverBgm.volume = 0.8;
-    gameOverBgm.currentTime = 0;
-    gameOverBgm.play().catch(()=>{});
-  }
-
-  if (gameOverText) {
-    gameOverText.classList.remove("hidden");   // ← display:none 제거
-    void gameOverText.offsetHeight;            // 애니메이션 트리거
-    gameOverText.classList.add("show-game-over");
-  } else {
-    console.warn("#game-over not found");
-  }
-
-  if (retryBtn) {
-    setTimeout(() => {
-      retryBtn.classList.remove("hidden");     // ← display:none 제거
-      retryBtn.classList.add("show");          // ← opacity:1
-      console.log("[GAMEOVER] retry visible");
-    }, 600);
-  } else {
-    console.warn("#retry-btn not found");
-  }
-}
-
 function showGoldMessage(amount) {
   goldMessage.textContent = `+${amount} gold`;
   goldMessage.style.opacity = 1;
@@ -312,7 +234,7 @@ function playSound(id, volume = 1.0) {
   if (!srcEl) return;
   const s = srcEl.cloneNode(true);
   s.volume = volume;
-  s.muted = isMuted;
+  s.muted = audioState.muted;
   document.body.appendChild(s);
   s.play().catch(err => console.log("play error:", id, err));
   s.addEventListener("ended", () => s.remove());
@@ -359,6 +281,31 @@ function damageMonster() {
 }
 
 // ===== 입력/제출 =====
+function showGameOverUI() {
+  console.log("[GAMEOVER] show");
+  pauseBgm();
+
+  const gameOverBgm = document.getElementById("game-over-bgm");
+  if (gameOverBgm) {
+    gameOverBgm.volume = 0.8;
+    gameOverBgm.currentTime = 0;
+    gameOverBgm.play().catch(()=>{});
+  }
+
+  if (gameOverText) {
+    gameOverText.classList.remove("hidden");
+    void gameOverText.offsetHeight; // 애니메이션 트리거
+    gameOverText.classList.add("show-game-over");
+  }
+
+  if (retryBtn) {
+    setTimeout(() => {
+      retryBtn.classList.remove("hidden");
+      retryBtn.classList.add("show");
+    }, 600);
+  }
+}
+
 function handleSubmit() {
   if (heroHealth <= 0) return;
   const typed = norm(input.value.trim());
@@ -366,14 +313,11 @@ function handleSubmit() {
   console.log("[SUBMIT] typed:", typed, "answer:", answer);
 
   if (typed === answer) {
-    console.log("[SUBMIT] correct!");
     damageMonster();
     setNewWord();
   } else {
     heroHealth--;
-    console.log("[SUBMIT] wrong! heroHealth:", heroHealth);
     updateHeroHearts();
-
     if (monster) {
       monster.classList.add("attack");
       setTimeout(() => monster.classList.remove("attack"), 400);
@@ -381,16 +325,8 @@ function handleSubmit() {
     playSound("hero-hit-sound");
 
     if (heroHealth <= 0) {
-      console.log("[SUBMIT] GAME OVER branch");
       input.disabled = true;
       showGameOverUI();
-    }
-      if (bgm) { bgm.pause(); bgm.currentTime = 0; }
-      const gameOverBgm = document.getElementById("game-over-bgm");
-      if (gameOverBgm) {
-        gameOverBgm.volume = 0.8;
-        gameOverBgm.currentTime = 0;
-        gameOverBgm.play().catch(()=>{});
     }
   }
   input.value = "";
@@ -399,15 +335,13 @@ function handleSubmit() {
 if (input) {
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
-      if (isComposing || e.isComposing) return;  // 조합 중이면 무시
+      if (isComposing || e.isComposing) return;
       e.preventDefault();
-      startBgmIfAllowed();
       handleSubmit();
     }
   }, { passive: false });
 
   input.addEventListener("focus", () => {
-    startBgmIfAllowed();
     requestAnimationFrame(() => {
       input.scrollIntoView({ block: "center", behavior: "smooth" });
     });
@@ -416,50 +350,44 @@ if (input) {
 
 if (typingForm) {
   typingForm.addEventListener("submit", (e) => {
-    if (isComposing) { e.preventDefault(); return; }  // 조합 중이면 무시
+    if (isComposing) { e.preventDefault(); return; }
     e.preventDefault();
-    startBgmIfAllowed();
     handleSubmit();
   });
 }
 
 if (retryBtn) {
-retryBtn.addEventListener("click", () => {
-  score = 0;
-  gold = 0;
-  heroHealth = 3;
-  stage = 1;
-  isBossStage = false;
-  input.disabled = false;
+  retryBtn.addEventListener("click", () => {
+    score = 0;
+    gold = 0;
+    heroHealth = 3;
+    stage = 1;
+    isBossStage = false;
+    input.disabled = false;
 
-  const gameOverBgm = document.getElementById("game-over-bgm");
-  if (gameOverBgm) { gameOverBgm.pause(); gameOverBgm.currentTime = 0; }
+    const gameOverBgm = document.getElementById("game-over-bgm");
+    if (gameOverBgm) { try { gameOverBgm.pause(); gameOverBgm.currentTime = 0; } catch(_){ } }
 
-  if (!isMuted && bgm) {
-    bgm.currentTime = 0;
-    bgm.volume = 0.4;
-    bgmStarted = false;
-    startBgmIfAllowed();
-  }
+    if (!audioState.muted) {
+      resumeBgmFromStart();
+    }
 
-  gameOverText.classList.add("hidden");
-  gameOverText.classList.remove("show-game-over");
-  retryBtn.classList.add("hidden");
-  retryBtn.classList.remove("show");
+    gameOverText.classList.add("hidden");
+    gameOverText.classList.remove("show-game-over");
+    retryBtn.classList.add("hidden");
+    retryBtn.classList.remove("show");
 
-  scoreSpan.textContent = "무찌른 몬스터 수: 0";
-  goldSpan.textContent = "얻은 금화: 0";
-  stageText.textContent = "Stage 1";
+    scoreSpan.textContent = "무찌른 몬스터 수: 0";
+    goldSpan.textContent = "얻은 금화: 0";
+    stageText.textContent = "Stage 1";
 
-  updateHeroHearts();
-  setNewMonster();
-  setNewWord();
-});
-} else {
-  console.warn("retry-btn not found");
+    updateHeroHearts();
+    setNewMonster();
+    setNewWord();
+  });
 }
 
-// ===== 초기화 =====
+// ===== 초기화 & 유틸 =====
 function positionHearts() {
   const heroEl = document.getElementById('hero');
   if (!heroEl || !heroHearts) return;
@@ -481,7 +409,6 @@ function initUI() {
   setNewMonster();
   setNewWord();
 
-  // 페인트 직후/지연 배치(백업)
   requestAnimationFrame(() => {
     positionHearts();
     setTimeout(positionHearts, 120);
@@ -497,5 +424,4 @@ if (document.readyState === 'loading') {
   initUI();
 }
 
-// 화면 회전/리사이즈 때도 재배치
 window.addEventListener('resize', positionHearts);
