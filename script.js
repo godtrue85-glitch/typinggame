@@ -120,6 +120,35 @@ if (input) {
   input.addEventListener('compositionend', () => { isComposing = false; });
 }
 
+function startBgmIfAllowed() {
+  if (bgmStarted || isMuted || !bgm || isMusicPlaying) return;
+
+  const tryPlay = () => {
+    bgm.volume = 0.4;
+    bgm.currentTime = 0; // 처음부터
+    bgm.play()
+      .then(() => {
+        bgmStarted = true;
+        isMusicPlaying = true;
+        if (musicIcon) musicIcon.src = "icons/music-on.png";
+        console.log("[BGM] started normally");
+      })
+      .catch(err => {
+        console.warn("[BGM] play blocked:", err);
+      });
+  };
+
+  if (bgm.readyState < 1) {
+    bgm.addEventListener("loadedmetadata", tryPlay, { once: true });
+  } else {
+    tryPlay();
+  }
+}
+
+// 유저 입력 시 반드시 호출
+document.addEventListener("pointerdown", startBgmIfAllowed, { once: true });
+document.addEventListener("keydown", startBgmIfAllowed, { once: true });
+
 function primeAudio() {
   audioIds.forEach(id => {
     const el = document.getElementById(id);
