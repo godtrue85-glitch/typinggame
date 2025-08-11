@@ -376,6 +376,7 @@ function initUI() {
   gameReady = true;
   console.log("[INIT] ready with word:", currentWord);
   // 히어로 이미지가 준비되면 위치 잡기
+  
   const heroEl = document.getElementById('hero');
 
   if (heroEl && heroEl.complete && heroEl.naturalHeight > 0) {
@@ -383,8 +384,8 @@ function initUI() {
   } else if (heroEl) {
     heroEl.addEventListener('load', positionHearts, { once: true });
     requestAnimationFrame(() => {
-    positionHearts();
-    setTimeout(positionHearts, 120);
+     positionHearts();
+     setTimeout(positionHearts, 120);
   });
  }
 }
