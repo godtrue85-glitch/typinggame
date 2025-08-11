@@ -39,6 +39,7 @@ const typingForm = document.getElementById("typing-form");
 const musicIcon = document.getElementById("music-icon");
 const muteBtn = document.getElementById("mute-btn");
 const bgm = document.getElementById("bgm");
+const retryBtn = document.getElementById("retry-btn");
 
 const monsterImages = [
   "monsters/monster1.png","monsters/monster2.png","monsters/monster3.png",
@@ -50,6 +51,15 @@ const audioIds = ["bgm","hero-hit-sound","game-over-bgm","gold-sound","hit-sound
 
 // 비교용 정규화 유틸 (NFC + 제로폭문자 제거)
 const norm = (s) => (s || "").normalize('NFC').replace(/[\u200B-\u200D\uFEFF]/g, "");
+
+console.log(
+  "DOM check:",
+  !!document.getElementById("game-over"),
+  !!document.getElementById("retry-btn"),
+  !!document.getElementById("monster"),
+  !!document.getElementById("input"),
+  !!document.getElementById("typing-form")
+);
 
 // 한글 IME 조합 처리
 let isComposing = false;
@@ -193,6 +203,36 @@ function updateHeroHearts() {
   }
 }
 
+function showGameOverUI() {
+  console.log("[GAMEOVER] show");
+  if (bgm) { try { bgm.pause(); bgm.currentTime = 0; } catch(_){} }
+
+  const gameOverBgm = document.getElementById("game-over-bgm");
+  if (gameOverBgm) {
+    gameOverBgm.volume = 0.8;
+    gameOverBgm.currentTime = 0;
+    gameOverBgm.play().catch(()=>{});
+  }
+
+  if (gameOverText) {
+    gameOverText.classList.remove("hidden");   // ← display:none 제거
+    void gameOverText.offsetHeight;            // 애니메이션 트리거
+    gameOverText.classList.add("show-game-over");
+  } else {
+    console.warn("#game-over not found");
+  }
+
+  if (retryBtn) {
+    setTimeout(() => {
+      retryBtn.classList.remove("hidden");     // ← display:none 제거
+      retryBtn.classList.add("show");          // ← opacity:1
+      console.log("[GAMEOVER] retry visible");
+    }, 600);
+  } else {
+    console.warn("#retry-btn not found");
+  }
+}
+
 function showGoldMessage(amount) {
   goldMessage.textContent = `+${amount} gold`;
   goldMessage.style.opacity = 1;
@@ -252,43 +292,37 @@ function damageMonster() {
 
 // ===== 입력/제출 =====
 function handleSubmit() {
-  if (!gameReady) {
-    console.warn("[SUBMIT] ignored: not ready");
-    return;
-  }
   if (heroHealth <= 0) return;
-
   const typed = norm(input.value.trim());
   const answer = norm(currentWord);
-
   console.log("[SUBMIT] typed:", typed, "answer:", answer);
 
   if (typed === answer) {
+    console.log("[SUBMIT] correct!");
     damageMonster();
     setNewWord();
   } else {
     heroHealth--;
+    console.log("[SUBMIT] wrong! heroHealth:", heroHealth);
     updateHeroHearts();
+
+    if (monster) {
+      monster.classList.add("attack");
+      setTimeout(() => monster.classList.remove("attack"), 400);
+    }
     playSound("hero-hit-sound");
-    monster.classList.add("attack");
-    setTimeout(() => monster.classList.remove("attack"), 400);
 
     if (heroHealth <= 0) {
+      console.log("[SUBMIT] GAME OVER branch");
       input.disabled = true;
+      showGameOverUI();
+    }
       if (bgm) { bgm.pause(); bgm.currentTime = 0; }
       const gameOverBgm = document.getElementById("game-over-bgm");
       if (gameOverBgm) {
         gameOverBgm.volume = 0.8;
         gameOverBgm.currentTime = 0;
         gameOverBgm.play().catch(()=>{});
-      }
-      gameOverText.classList.remove("hidden");
-      void gameOverText.offsetHeight;
-      gameOverText.classList.add("show-game-over");
-      setTimeout(() => {
-        retryBtn.classList.remove("hidden");
-        retryBtn.classList.add("show");
-      }, 1000);
     }
   }
   input.value = "";
@@ -321,7 +355,6 @@ if (typingForm) {
   });
 }
 
-const retryBtn = document.getElementById("retry-btn");
 if (retryBtn) {
 retryBtn.addEventListener("click", () => {
   score = 0;
@@ -379,14 +412,6 @@ function initUI() {
   updateHeroHearts();
   setNewMonster();
   setNewWord();
-
-  // 히어로 이미지가 준비되면 위치 잡기
-  const heroEl = document.getElementById('hero');
-  if (heroEl && heroEl.complete && heroEl.naturalHeight > 0) {
-    positionHearts();
-  } else if (heroEl) {
-    heroEl.addEventListener('load', positionHearts, { once: true });
-  }
 
   // 페인트 직후/지연 배치(백업)
   requestAnimationFrame(() => {
