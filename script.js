@@ -272,7 +272,9 @@ function damageMonster() {
 function handleSubmit() {
   if (heroHealth <= 0) return;
   const typed = norm(input.value.trim());
-  if (typed === currentWord) {
+  const answer = norm(currentWord);
+
+  if (typed === answer) {
     damageMonster();
     setNewWord();
   } else {
