@@ -34,7 +34,6 @@ const goldMessage = document.getElementById("gold-message");
 const heroHearts = document.getElementById("hero-hearts");
 const gameOverText = document.getElementById("game-over");
 const stageText = document.getElementById("stage-indicator");
-const retryBtn = document.getElementById("retry-btn");
 const typingForm = document.getElementById("typing-form");
 
 const musicIcon = document.getElementById("music-icon");
@@ -322,6 +321,7 @@ if (typingForm) {
   });
 }
 
+const retryBtn = document.getElementById("retry-btn");
 if (retryBtn) {
 retryBtn.addEventListener("click", () => {
   score = 0;
