@@ -11,6 +11,7 @@ let gold = 0;
 let monsterHealth = 5;
 let maxHealth = 5;
 let heroHealth = 3;
+let gameReady = false;
 
 let stage = 1;
 let isBossStage = false;
@@ -272,6 +273,10 @@ function damageMonster() {
 
 // ===== 입력/제출 =====
 function handleSubmit() {
+  if (!gameReady) {                           // ✅ 아직 단어 준비 전이면
+    console.warn("[SUBMIT] ignored: not ready");
+    return;
+  }
   if (heroHealth <= 0) return;
   const typed = norm(input.value.trim());
   const answer = norm(currentWord);
@@ -371,7 +376,8 @@ function initUI() {
   updateHeroHearts();   // 하트 DOM 채우기
   setNewMonster();
   setNewWord();
-
+  gameReady = true;
+  console.log("[INIT] ready with word:", currentWord);
   // 히어로 이미지가 준비되면 위치 잡기
   const heroEl = document.getElementById('hero');
 
