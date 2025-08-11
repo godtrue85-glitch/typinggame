@@ -196,7 +196,7 @@ body {
 /* 작은 화면 최적화 */
 @media (max-width: 480px) {
   .monitor #game-over {
-    font-size: 32px !important;
+    font-size:20px !important;
   }
   .info { padding: 0 2px; }
 }
