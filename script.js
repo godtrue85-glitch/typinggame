@@ -24,14 +24,6 @@ let bossHealth = 10;
 
 let previousMonsterIndex = -1;
 
-// 한글 IME 조합 처리
-let isComposing = false;
-input.addEventListener('compositionstart', () => { isComposing = true; });
-input.addEventListener('compositionend', () => { isComposing = false; });
-
-// 비교용 정규화 유틸 (NFC + 제로폭문자 제거)
-const norm = (s) => (s || "").normalize('NFC').replace(/[\u200B-\u200D\uFEFF]/g, "");
-
 // 오디오 상태
 let isMusicPlaying = false;
 let isMuted = false;
@@ -49,6 +41,16 @@ const gameOverText = document.getElementById("game-over");
 const stageText = document.getElementById("stage-indicator");
 const retryBtn = document.getElementById("retry-btn");
 const typingForm = document.getElementById("typing-form");
+
+// 비교용 정규화 유틸 (NFC + 제로폭문자 제거)
+const norm = (s) => (s || "").normalize('NFC').replace(/[\u200B-\u200D\uFEFF]/g, "");
+
+// 한글 IME 조합 처리
+let isComposing = false;
+if (input) {
+input.addEventListener('compositionstart', () => { isComposing = true; });
+input.addEventListener('compositionend', () => { isComposing = false; });
+}
 
 const musicIcon = document.getElementById("music-icon");
 const muteBtn = document.getElementById("mute-btn");
