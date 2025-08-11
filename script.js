@@ -1,9 +1,3 @@
-document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
-if (!('PointerEvent' in window)) {
-  document.addEventListener("touchstart", unlockAudioOnce, {once: true, passive: true })
-}
-document.addEventListener("keydown", unlockAudioOnce, { once: true });
-
 // ===== 상태값 =====
 const stageWords = {
   1: ["주스", "물", "우유"],
@@ -119,6 +113,12 @@ function unlockAudioOnce() {
   primeAudio();
   startBgmIfAllowed();
 }
+
+document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
+if (!('PointerEvent' in window)) {
+  document.addEventListener("touchstart", unlockAudioOnce, {once: true, passive: true })
+}
+document.addEventListener("keydown", unlockAudioOnce, { once: true });
 
 // ===== 마스터 음소거 =====
 function setMasterMute(mute) {
@@ -374,13 +374,15 @@ function initUI() {
 
   // 히어로 이미지가 준비되면 위치 잡기
   const heroEl = document.getElementById('hero');
+
   if (heroEl && heroEl.complete && heroEl.naturalHeight > 0) {
     positionHearts();
   } else if (heroEl) {
     heroEl.addEventListener('load', positionHearts, { once: true });
-    // 혹시 load 이벤트를 못 받는 경우 대비해 한 번 더 시도
-    requestAnimationFrame(() => setTimeout(positionHearts, 100));
-  }
+    requestAnimationFrame(() => {
+    positionHearts();
+    setTimeout(positionHearts, 120);
+  });
 }
 
 if (document.readyState === 'loading') {
