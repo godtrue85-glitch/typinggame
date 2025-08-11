@@ -1,65 +1,202 @@
-/* === Game Over: 모니터 안에서 한 줄 + 위에서 아래로 내려오게 === */
-.monitor {
-  position: relative;
-  overflow: visible; /* 위에서 내려올 때 잘림 방지 */
+/* 리셋 & 터치 UX */
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: 'Noto Sans KR', sans-serif;
+  background: #f0f0f0;
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  /* 더블탭 확대/300ms 지연 완화 */
+  touch-action: manipulation;
 }
 
-/* 시작: 화면 위쪽(보이지 않게) */
-#game-over {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translate(-50%, -140%); /* 위로 숨겨두기 */
-  z-index: 999;
+.game-container {
+  margin: 24px auto;
+  padding: env(safe-area-inset-top) 12px env(safe-area-inset-bottom);
+  max-width: 960px;
+}
 
-  /* 한 줄 강제 */
-  white-space: nowrap;
-  word-break: normal;
-  overflow-wrap: normal;
-  min-width: max-content;
-  display: inline-block;
-
-  /* 스타일 */
-  font-family: 'Black Han Sans', sans-serif;
-  font-weight: bold;
-  color: red;
-  background: #fff;
-  border: 4px solid red;
+/* 모니터 영역: 가변 폭 */
+.monitor {
+  background: #333; color: #fff;
+  padding: 20px;
   border-radius: 12px;
-  padding: 16px 24px;
-  font-size: clamp(28px, 8vw, 48px);
-  opacity: 0;
-  transition: transform 0.8s ease, opacity 0.8s ease;
+  width: min(92vw, 600px);
+  height: min(55vw, 300px);
+  margin: 0 auto 16px;
+  position: relative;
+  font-size: clamp(20px, 5vw, 40px);
+  overflow: hidden;
+}
+
+/* 캐릭터 크기: 화면에 맞춰 축소 */
+.hero {
+  position: absolute;
+  bottom: 8px;           /* ← 복구 */
+  left: 8px;             /* ← 복구 */
+  height: clamp(90px, 24vw, 150px);  /* ← 복구 */
+  z-index: 1;
+}
+.monster {
+  position: absolute; bottom: 18px; right: 20px;
+  height: clamp(80px, 22vw, 130px);
   will-change: transform, opacity;
 }
 
-/* 등장: 세로 중앙에 착지(위→아래로 내려오는 느낌) */
-#game-over.show-game-over {
-  transform: translate(-50%, 50%);
-  opacity: 1;
+#hero-hearts {
+  position: absolute;
+  z-index: 200;          /* 항상 히어로 위 */
+  pointer-events: none;
+  display: flex;
+  gap: 2px;
+  font-size: clamp(18px, 3.6vw, 25px);
+  /* ➜ bottom/left는 JS(positionHearts)에서 계산해서 넣습니다. */
 }
 
-/* 재도전 버튼: Game Over 아래쪽에 고정 */
+/* 체력바 */
+.health-bar {
+  position: absolute; bottom: clamp(95px, 28vw, 170px); right: 24px;
+  width: clamp(80px, 18vw, 100px); height: 12px;
+  background: #fff; border: 2px solid #ccc; border-radius: 6px; overflow: hidden; z-index: 10;
+}
+.health-bar-inner {
+  height: 100%; width: 100%; background: red; transition: width 0.3s ease;
+}
+
+/* 점수/입력 영역 */
+.typing-area {
+  width: min(92vw, 800px);
+  margin: 16px auto 0;
+}
+.info {
+  margin-bottom: 8px; font-size: clamp(14px, 3.6vw, 20px);
+  font-weight: bold; display: flex; justify-content: space-between; padding: 0 6px;
+}
+.word-box {
+  background: #fff; border: 2px solid #888; border-radius: 8px;
+  padding: 12px 0; font-size: clamp(22px, 6vw, 28px);
+  width: 100%; margin-bottom: 10px;
+}
+
+/* 입력창: iOS 확대 방지(>=16px), 키보드 올라올 때도 보기 좋게 */
+#input {
+  padding: 12px; font-size: 18px; /* >=16px */
+  width: 100%;
+}
+
+/* 제출 버튼: 터치 영역 넉넉히 */
+.primary-btn {
+  margin-top: 8px;
+  display: inline-block;
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 18px;
+  background: #4f46e5; color: #fff;
+  border: none; border-radius: 8px; cursor: pointer;
+}
+.primary-btn:active { transform: scale(0.99); }
+
+.music-toggle { margin-top: 10px; text-align: center; }
+#mute-btn {
+  padding: 8px 10px;               /* 터치 영역 확대 */
+  border: none; background: none;  /* 기본 스타일 제거 */
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#mute-btn:active { transform: scale(0.98); }
+#music-icon { width: 40px; height: 40px; display: block; }
+
+
+/* 골드 텍스트 */
+#gold-message {
+  position: absolute; bottom: clamp(80px, 24vw, 140px); right: clamp(80px, 24vw, 140px);
+  color: gold; font-size: clamp(18px, 4.5vw, 24px);
+  font-weight: bold; opacity: 0; transition: opacity 0.3s ease;
+  pointer-events: none; z-index: 20;
+}
+
+/* 애니메이션(기존 유지) */
+.hero.attack { animation: attack-shake 0.3s; }
+@keyframes attack-shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-5px); }
+  100% { transform: translateX(0); }
+}
+.monster.hit { animation: monster-smash 0.6s ease; opacity: 0; }
+@keyframes monster-smash {
+  0% { transform: rotate(0) scale(1); filter: brightness(1); opacity: 1; }
+  20% { transform: rotate(10deg) scale(1.1); filter: brightness(2); opacity: 0.9; }
+  40% { transform: rotate(-5deg); }
+  60% { transform: rotate(15deg); }
+  80% { transform: rotate(90deg) scale(0.9); opacity: 0.5; }
+  100% { transform: rotate(90deg) scale(0.8); opacity: 0; }
+}
+
+/* 보스 등장 */
+@keyframes boss-appear {
+  0% { transform: translate(0, -200px) scale(1); opacity: 0; }
+  95% { transform: translate(0, 0) scale(1.2, 0.8); opacity: 1; }
+  100% { transform: translate(0, 0) scale(1); opacity: 1; }
+}
+.boss-appear { animation: boss-appear 1s ease-out; position: relative; }
+
+/* 화면 흔들림 */
+@keyframes screen-shake {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-5px, 3px); }
+  40% { transform: translate(4px, -4px); }
+  60% { transform: translate(-3px, 4px); }
+  80% { transform: translate(5px, -2px); }
+  100% { transform: translate(0, 0); }
+}
+.shake-screen { animation: screen-shake 0.3s ease; }
+
+/* 먼지 파티클 */
+#dust-container { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 50; }
+.dust {
+  position: absolute; bottom: 0; width: 20px; height: 20px;
+  background: radial-gradient(circle, #aaa, transparent);
+  border-radius: 50%; animation: dust-burst 0.5s ease-out forwards; opacity: 0.6;
+}
+@keyframes dust-burst {
+  0% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  100% { transform: translate(var(--x), -40px) scale(1.5); opacity: 0; }
+}
+
+/* 게임오버/재도전 */
+#game-over {
+  white-space: nowrap;
+  display: inline-block;
+  max-width: none;
+  position: absolute; /* 키보드 영향 최소화 */
+  top: 20%; left: 50%; transform: translate(-50%, -100%);
+  font-size: clamp(36px, 10vw, 48px);
+  font-weight: bold; color: red; background: #fff;
+  padding: 16px 24px; border: 4px solid red; border-radius: 12px;
+  z-index: 999; opacity: 0; font-family: 'Black Han Sans', sans-serif;
+  transition: transform 1s ease, opacity 1s ease;
+}
+#game-over.show-game-over { opacity: 1; transform: translate(-50%, -50%); }
+
 #retry-btn {
   position: absolute;
-  left: 50%;
-  top: 50%;                   /* 기준을 중앙으로 두고 */
-  transform: translate(-50%, 120px); /* 중앙에서 아래로 120px */
-  z-index: 999;
-
-  opacity: 0;
-  transition: opacity 0.5s ease;
-
-  font-size: 18px;
-  padding: 12px 24px;
-  background: #ff4d4d; color: #fff;
-  border: none; border-radius: 8px; cursor: pointer;
-  font-family: 'Noto Sans KR', sans-serif;
+  top: calc(50% + 60px); left: 50%; transform: translate(-50%);
+  font-size: 18px; padding: 12px 24px;
+  background: #ff4d4d; color: #fff; border: none; border-radius: 8px; cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif; z-index: 999; opacity: 0; transition: opacity 0.5s ease;
 }
 #retry-btn.show { opacity: 1; }
 
-/* 모바일에서 글자 크기로 넘침 방지 */
+.hidden { display: none; }
+.show { display: block; }
+
+/* 작은 화면 최적화 */
 @media (max-width: 480px) {
-  #game-over { font-size: 24px; }
-  #retry-btn { transform: translate(-50%, 100px); } /* 모바일은 약간 더 가까이 */
+  .monitor #game-over {
+    font-size:20px !important;
+  }
+  .info { padding: 0 2px; }
 }
