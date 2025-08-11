@@ -73,7 +73,7 @@ function unlockAudioOnce() {
   if (audioUnlocked) return;
   audioUnlocked = true;
   primeSfx();            // SFX만 프라임
-  startBgmIfAllowed();   // BGM 시작 시도
+  tryStartBgm();   // BGM 시작 시도
 }
 
 document.addEventListener("pointerdown", unlockAudioOnce, { once: true });
@@ -114,7 +114,8 @@ function unlockAudioOnce() {
 
 function setMasterMute(mute) {
   audioState.muted = !!mute;
-  audioIds.forEach(id => {
+  if (bmg) bgm.mutetd = audioState.muted;
+  sfxIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.muted = audioState.muted;
   });
@@ -122,8 +123,7 @@ function setMasterMute(mute) {
   if (muteBtn)   muteBtn.setAttribute("aria-pressed", String(audioState.muted));
 
   if (audioState.muted) {
-    if (bgm) { try { bgm.pause(); } catch(_){} }
-    audioState.playing = false;
+    pauseBgm();
   } else {
     tryStartBgm();
   }
