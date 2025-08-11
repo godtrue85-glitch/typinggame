@@ -386,6 +386,7 @@ function initUI() {
     positionHearts();
     setTimeout(positionHearts, 120);
   });
+ }
 }
 
 if (document.readyState === 'loading') {
