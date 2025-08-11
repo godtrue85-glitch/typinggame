@@ -19,16 +19,15 @@ body {
 
 /* 모니터 영역: 가변 폭 */
 .monitor {
-  position: relative;
-  overflow: visible; /* 추가 */
-  background: #333; 
-  color: #fff;
+  background: #333; color: #fff;
   padding: 20px;
   border-radius: 12px;
   width: min(92vw, 600px);
   height: min(55vw, 300px);
   margin: 0 auto 16px;
+  position: relative;
   font-size: clamp(20px, 5vw, 40px);
+  overflow: hidden;
 }
 
 
