@@ -1,21 +1,22 @@
-/* === Game Over를 모니터 안에서 한 줄 + 위에서 내려오게 === */
+/* === Game Over: 모니터 안에서 한 줄 + 위에서 아래로 내려오게 === */
 .monitor {
   position: relative;
-  overflow: visible;          /* <- 위에서 내려올 때 잘리지 않도록 */
+  overflow: visible; /* 위에서 내려올 때 잘림 방지 */
 }
 
-/* 기본 상태: 화면 위쪽(보이지 않는 곳)에서 대기 */
+/* 시작: 화면 위쪽(보이지 않게) */
 #game-over {
   position: absolute;
-  top: 0; left: 50%;
-  transform: translate(-50%, -150%); /* 화면 위(자기 높이의 1.5배 위) */
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -140%); /* 위로 숨겨두기 */
   z-index: 999;
 
   /* 한 줄 강제 */
   white-space: nowrap;
   word-break: normal;
   overflow-wrap: normal;
-  min-width: max-content;      /* 컨텐츠 길이만큼 박스가 늘어남 */
+  min-width: max-content;
   display: inline-block;
 
   /* 스타일 */
@@ -32,24 +33,23 @@
   will-change: transform, opacity;
 }
 
-/* 등장 상태: 모니터 세로 중앙에 착지 */
+/* 등장: 세로 중앙에 착지(위→아래로 내려오는 느낌) */
 #game-over.show-game-over {
-  transform: translate(-50%, 50%);  /* top:0 기준이니 +50%면 세로 중앙 근처 */
+  transform: translate(-50%, 50%);
   opacity: 1;
 }
 
-/* 재도전 버튼: Game Over 바로 아래 중앙 */
+/* 재도전 버튼: Game Over 아래쪽에 고정 */
 #retry-btn {
   position: absolute;
   left: 50%;
-  transform: translate(-50%, calc(50% + 60px)); /* 세로 중앙 + 60px 아래 */
+  top: 50%;                   /* 기준을 중앙으로 두고 */
+  transform: translate(-50%, 120px); /* 중앙에서 아래로 120px */
   z-index: 999;
 
-  /* 표시/전환 */
   opacity: 0;
   transition: opacity 0.5s ease;
 
-  /* 버튼 스타일 */
   font-size: 18px;
   padding: 12px 24px;
   background: #ff4d4d; color: #fff;
@@ -58,7 +58,8 @@
 }
 #retry-btn.show { opacity: 1; }
 
-/* 모바일에서 폰트가 너무 커서 넘칠 경우 대비 */
+/* 모바일에서 글자 크기로 넘침 방지 */
 @media (max-width: 480px) {
-  #game-over { font-size: 24px; }   /* 여유가 더 필요하면 22px 등으로 */
+  #game-over { font-size: 24px; }
+  #retry-btn { transform: translate(-50%, 100px); } /* 모바일은 약간 더 가까이 */
 }
