@@ -370,6 +370,7 @@ retryBtn.addEventListener("click", () => {
   updateHeroHearts();
   setNewMonster();
   setNewWord();
+  console.log("[WORD] set:", currentWord);
 });
 
 function initUI() {
