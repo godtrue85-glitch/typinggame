@@ -322,7 +322,7 @@ if (typingForm) {
   });
 }
 
-// ===== 재도전 =====
+if (retryBtn) {
 retryBtn.addEventListener("click", () => {
   score = 0;
   gold = 0;
@@ -354,6 +354,9 @@ retryBtn.addEventListener("click", () => {
   setNewMonster();
   setNewWord();
 });
+} else {
+  console.warn("retry-btn not found");
+}
 
 // ===== 초기화 =====
 function positionHearts() {
