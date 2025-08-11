@@ -42,7 +42,7 @@
 #retry-btn {
   position: absolute;
   left: 50%;
-  transform: translate(-50%, calc(50% + 80px)); /* 세로 중앙 + 60px 아래 */
+  transform: translate(-50%, calc(50% + 60px)); /* 세로 중앙 + 60px 아래 */
   z-index: 999;
 
   /* 표시/전환 */
@@ -51,7 +51,7 @@
 
   /* 버튼 스타일 */
   font-size: 18px;
-  padding: 20px 24px;
+  padding: 12px 24px;
   background: #ff4d4d; color: #fff;
   border: none; border-radius: 8px; cursor: pointer;
   font-family: 'Noto Sans KR', sans-serif;
